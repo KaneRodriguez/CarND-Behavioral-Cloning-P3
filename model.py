@@ -10,10 +10,19 @@ trainingDataPath = "../behavioral_cloning_data/"
 csvFilePath = trainingDataPath + "driving_log.csv"
 imagesPath = trainingDataPath + "IMG/"
 
+# # DEBUGGING ONLY
+# from statistics import median
+
 # load in csv file with training data
 csvLines = []
 with open(csvFilePath) as dataCsvFile:
     csvLines = [line for line in csv.reader(dataCsvFile)]
+    
+    # # DEBUGGING ONLY. Grab the leftest, rightest, and centerest images
+    # csvLines = np.array(sorted(csvLines, key=lambda x : float(x[3])))
+    # lgt = len(csvLines)
+    # fr = 20
+    # csvLines = csvLines[np.r_[0:lgt//fr, lgt//2 - lgt//fr:lgt//2 + lgt//fr, lgt//fr*(fr - 1):lgt]]
 
 # split data into training and validation sets
 train_lines, validation_lines = train_test_split(csvLines, test_size=0.2)
@@ -22,15 +31,21 @@ train_lines, validation_lines = train_test_split(csvLines, test_size=0.2)
 def generator(lines, pathToImages, batch_size=32, normalization_preprocessing_only=False):
     # define image preprocessing generator
     image_preprocessing_generator = ImageDataGenerator(
-        featurewise_center=True,
-        featurewise_std_normalization=True)
+        featurewise_center=False,
+        featurewise_std_normalization=False)
     # check if more preprocessing required
     if normalization_preprocessing_only is False:
         # add extra preprocessing
         image_preprocessing_generator = ImageDataGenerator(
-            featurewise_center=True,
-            featurewise_std_normalization=True,
-            vertical_flip=False)
+            featurewise_center=False,
+            featurewise_std_normalization=False,
+            rotation_range=5,
+            shear_range=2,
+            zoom_range=0.1,
+            width_shift_range=1,
+            height_shift_range=1,
+            #preprocessing_function=?
+            horizontal_flip=True)
             
     # generators loop forever
     while 1:
@@ -75,8 +90,11 @@ from keras.layers import Input, Lambda, Cropping2D
 # Create Sequential Model
 model = Sequential()
 
-# Feed Input to Model and Crop
-model.add(Cropping2D(input_shape=(160, 320, 3), cropping=((70, 25), (0, 0))))
+# Feed Input to Model and preprocess incoming data, centered around zero with small standard deviation 
+model.add(Lambda(lambda x: x/127.5 - 1., input_shape=(160, 320, 3), output_shape=(160, 320, 3)))
+
+# Cropping images
+model.add(Cropping2D(cropping=((70, 25), (0, 0))))
 
 # Three convolutional layers with a 2×2 stride and a 5×5 kernel
 model.add(Conv2D(filters=24, kernel_size=5, strides=2, padding='valid', activation='relu'))
@@ -102,16 +120,17 @@ history_object = model.fit_generator(train_generator,
                                     steps_per_epoch=len(train_lines),
                                     validation_data=validation_generator, 
                                     validation_steps=len(validation_lines), 
-                                    epochs=5,
+                                    epochs=3,
                                     verbose=1)
 
 model.save("model.h5")
+
 """
 Save current model characteristics to log
 """
 import datetime
 architecture_title = '"NVIDIA Architecture"'
-notable_changes = '"Captured data of vehicle driving from each side of road to center and of vehicle driving in lane center."'
+notable_changes = '"Shifting, shearing, zooming, and rotating."'
 fields=[str(datetime.date.today()),
         str(datetime.datetime.now().strftime('%H:%M')),
         history_object.history["loss"][-1],

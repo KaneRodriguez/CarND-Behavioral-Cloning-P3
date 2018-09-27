@@ -1,3 +1,19 @@
 Date,Time,Training Loss (mse),Validation Loss (mse),Architecture,Epochs,Batch,Notable Changes,Notes
 2018-09-26,21:00,0.0301286205649,0.0393161140382,NVIDIA Architecture,5,32,First Implementation of the NVIDIA Architecture described [here](https://devblogs.nvidia.com/deep-learning-self-driving-cars)., Car immediately turning left and driving off road
 2018-09-26,23:00,0.000507125873507,0.242552210887, Using an ImageDataGenerator with featurewise_std_normalization/featurewise_center/Vertical Flip all set to True., "Car immdediately turning left and halting before turning right and going off road. Also, since test error is low and validation is relatively high, model is likely overfitting." 
+2018-09-27,12:04,5.14638403715e-07,2.52817557111e-07,"""NVIDIA Architecture""",5,32,"""Captured data of vehicle driving from each side of road to center and of vehicle driving in lane center.""","""Vehicle veared off road to the right immediately"""
+2018-09-27,12:10,0.000285183485903,5.25605064468e-05,"""NVIDIA Architecture""",5,32,"""Generating images flipped vertically.""",""""""
+
+2018-09-27,12:20,0.0134236006998,0.0247253887355,"""NVIDIA Architecture""",5,32,"""Working with 3 images only.""","""Drove off side of road to the left again"""
+
+2018-09-27,12:42,0.0100536444224,0.000630642753094,"""NVIDIA Architecture""",10,32,"""Working with 3 image only. Epochs to 10. Changing vertical flip to horizontal flip..""",""""""
+
+2018-09-27,12:45,0.000254506700003,0.000641522638034,"""NVIDIA Architecture""",15,32,"""Could be underfitting. Increasing epochs""",""""""
+
+2018-09-27,12:53,0.00783248990774,0.00158521847334,"""NVIDIA Architecture""",15,32,"""Okay, 6 images.. and double checking we are using left, right, and center images""","""A little bit better. Didn't crash into the right as fast this time.."""
+
+2018-09-27,13:14,0.011659856166,0.00873844201366,"""NVIDIA Architecture""",3,32,"""  """,""""""
+
+2018-09-27,13:19,0.0133495447808,0.0150541970506,"""NVIDIA Architecture""",3,32,"""Changing back to original image normalization methods""","""Drove straight for a few seconds and slowly went off the edge. The normalization change is probably what messed it up before."""
+
+2018-09-27,13:40,0.0778574962169,0.0764802309374,"""NVIDIA Architecture""",3,32,"""Shifting, shearing, zooming, and rotating.""","""Vehicle travelled much farther down the track. Constantly braking and riding the left curb."""
