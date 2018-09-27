@@ -1,2 +1,3 @@
-Date,Time,Training Loss (mse),Validation Loss (mse),Architecture,Epochs,Batch,Notes
-2018-09-26,23:59.70,0.0301286205649,0.0393161140382,NVIDIA Architecture,5,32,First Implementation of the NVIDIA Architecture described [here](https://devblogs.nvidia.com/deep-learning-self-driving-cars).
+Date,Time,Training Loss (mse),Validation Loss (mse),Architecture,Epochs,Batch,Notable Changes,Notes
+2018-09-26,21:00,0.0301286205649,0.0393161140382,NVIDIA Architecture,5,32,First Implementation of the NVIDIA Architecture described [here](https://devblogs.nvidia.com/deep-learning-self-driving-cars)., Car immediately turning left and driving off road
+2018-09-26,23:00,0.000507125873507,0.242552210887, Using an ImageDataGenerator with featurewise_std_normalization/featurewise_center/Vertical Flip all set to True., "Car immdediately turning left and halting before turning right and going off road. Also, since test error is low and validation is relatively high, model is likely overfitting." 
