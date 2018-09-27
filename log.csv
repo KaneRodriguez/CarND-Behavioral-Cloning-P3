@@ -1,0 +1,2 @@
+Date,Time,Training Loss (mse),Validation Loss (mse),Architecture,Epochs,Batch,Notes
+2018-09-26,23:59.70,0.0301286205649,0.0393161140382,NVIDIA Architecture,5,32,First Implementation of the NVIDIA Architecture described [here](https://devblogs.nvidia.com/deep-learning-self-driving-cars).
