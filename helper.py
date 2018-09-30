@@ -4,15 +4,15 @@ Helper for logging information on previous model training session
 import datetime
 import csv
 
-def update_log(history_object, logPath=r'log.csv', arch_title='Architecture', changes='""'):
+def update_log(history_object, batch_size, logPath=r'log.csv', arch_title='Architecture', changes='""'):
     fields=[str(datetime.date.today()),
             str(datetime.datetime.now().strftime('%H:%M')),
             history_object.history["loss"][-1],
             history_object.history["val_loss"][-1], 
-            architecture_title,  
+            arch_title,  
             len(history_object.history["loss"]), # of Epochs 
             batch_size,
-            notable_changes,
+            changes,
             '""']
 
     # append new log data to end of log file

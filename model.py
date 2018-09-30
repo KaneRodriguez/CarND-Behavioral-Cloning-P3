@@ -5,13 +5,13 @@ from keras.layers.convolutional import Conv2D
 from keras.layers.pooling import MaxPooling2D
 from keras.layers import Input, Lambda, Cropping2D
 
-def train_model(train_generator, train_length, validation_generator, validation_length, saveModelPath='model.h5'):
+def train_model(train_generator, train_length, validation_generator, validation_length, input_shape, input_lambda, saveModelPath='model.h5'):
     # Create Sequential Model
     model = Sequential()
 
-    # Feed Input to Model and Crop images
-    model.add(Cropping2D(input_shape=(160, 320, 3), cropping=((70, 25), (0, 0))))
-
+    # Feed Input to Model
+    model.add(Lambda(lambda x: input_lambda(x), input_shape=input_shape))
+    
     # Three convolutional layers with a 2×2 stride and a 5×5 kernel
     model.add(Conv2D(filters=24, kernel_size=5, strides=2, padding='valid', activation='relu'))
     model.add(Conv2D(filters=36, kernel_size=5, strides=2, padding='valid', activation='relu'))
@@ -46,12 +46,3 @@ def train_model(train_generator, train_length, validation_generator, validation_
 
     # return model training history
     return history_object
-
-# Use model 
-from helper import update_log
-
-history_object = train_model(train_generator=train_generator, train_length=t_len, 
-            validation_generator=validation_generator, validation_length=v_len, 
-            saveModelPath='model.h5')
-
-update_log(history_object=history_object, arch_title='"NVIDIA Architecture"', changes='""')

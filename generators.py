@@ -6,13 +6,14 @@ from keras.preprocessing.image import ImageDataGenerator
 from sklearn.model_selection import train_test_split
 # from statistics import median
 
-def createGenerators(csvFilePath, imagesPath, batch_size=32, test_size=0.2, data_gen_pp=ImageDataGenerator(), subsegment=None, ignoreFirst=False):
+def createGenerators(csvFilePath, imagesPath, batch_size=32, test_size=0.2, data_gen_pp=ImageDataGenerator(), subsegment=None, ignoreFirst=False, prepreprocessing=lambda x, y: (x, y)):
     '''
         csvFilePath  -> relative path to the driving_log.csv file that holds all relevant data (TODO: perhaps cast to absolute file path before passing into this function)
         batch_size   -> how large is each batch
         test_size    -> what percentage is allocated towards testing (float between 0. and 1.)
         data_gen_pp  -> image preprocessing generator to be used on the training set only
         subsegment   -> only process part of the csv file (DEBUG ONLY)
+        prepreprocessing -> function to apply to batch images before they are fed to the image preprocessing generator
     '''    
     csvLines = []
     # load in csv file with training data
@@ -26,12 +27,6 @@ def createGenerators(csvFilePath, imagesPath, batch_size=32, test_size=0.2, data
     
         if subsegment is not None: 
             csvLines = csvLines[0:min(len(csvLines)-1, subsegment)]
-            # DEBUGGING ONLY. Only use the leftest, rightest, and centerest images
-            # fr = subsegment
-            # csvLines = np.array(sorted(csvLines, key=lambda x : float(x[3])))
-            # csvLines = np.array(sorted(csvLines, key=lambda x : float(x[3])))
-            # lgt = len(csvLines)
-            # csvLines = csvLines[np.r_[0:lgt//fr, lgt//2 - lgt//fr:lgt//2 + lgt//fr, lgt//fr*(fr - 1):lgt]]
 
     # split data into training and validation sets
     train_lines, validation_lines = train_test_split(csvLines, test_size=0.2)
@@ -53,6 +48,8 @@ def createGenerators(csvFilePath, imagesPath, batch_size=32, test_size=0.2, data
                     name = pathToImages + line[0].split('/')[-1].split('\\')[-1]
                     center_image = ndimage.imread(name)
                     center_angle = float(line[3])
+                    # apply any pre-preprocessing necessary
+                    center_image, center_angle = prepreprocessing(center_image, center_angle)
                     # add image and angle to current batch containers
                     images.append(center_image)
                     angles.append(center_angle)
@@ -60,6 +57,7 @@ def createGenerators(csvFilePath, imagesPath, batch_size=32, test_size=0.2, data
                 # convert lists to numpy arrays
                 X_train = np.array(images)
                 y_train = np.array(angles)
+                
                 # fit the preprocessing generator to images (TODO: might not be needed)
                 data_gen.fit(X_train)
                 # preprocess the images and return the result (this for loop runs once due to batch_size being the current batch size)

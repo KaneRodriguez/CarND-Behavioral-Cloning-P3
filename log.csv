@@ -17,3 +17,4 @@ Date,Time,Training Loss (mse),Validation Loss (mse),Architecture,Epochs,Batch,No
 2018-09-27,13:19,0.0133495447808,0.0150541970506,"""NVIDIA Architecture""",3,32,"""Changing back to original image normalization methods""","""Drove straight for a few seconds and slowly went off the edge. The normalization change is probably what messed it up before."""
 
 2018-09-27,13:40,0.0778574962169,0.0764802309374,"""NVIDIA Architecture""",3,32,"""Shifting, shearing, zooming, and rotating.""","""Vehicle travelled much farther down the track. Constantly braking and riding the left curb."""
+2018-09-29,19:50,0.0786216445267,1.39757394791,"""NVIDIA Architecture""",3,32,"""Adding prepreprocessing steps. Fixing horizontal flip (includes flipping the sign of the label).""",""""""
