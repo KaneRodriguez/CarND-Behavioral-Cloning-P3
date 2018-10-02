@@ -44,3 +44,6 @@ Date,Time,Training Loss (mse),Validation Loss (mse),Architecture,Epochs,Batch,No
 2018-10-01,15:56,0.00949575468258,0.380105674267,"""NVIDIA Architecture""",3,32,"""Adding more training data""",""""""
 2018-10-01,16:02,0.00129657859543,0.088432662189,"""NVIDIA Architecture""",3,32,"""Adding more training data""",""""""
 2018-10-01,16:14,0.00271643186517,0.0275246673687,"""NVIDIA Architecture""",3,32,"""Adding more training data""",""""""
+2018-10-01,21:56,4.00519539632e-07,0.0220904828846,"""NVIDIA Architecture""",3,32,"""Adding more training data""",""""""
+2018-10-01,22:09,0.000173083732064,0.00588410042692,"""NVIDIA Architecture""",3,32,"""Adding more training data""",""""""
+2018-10-01,22:20,1.3026934096e-07,0.0162457912252,"""NVIDIA Architecture""",3,32,"""Adding more training data""",""""""

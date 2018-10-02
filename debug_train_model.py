@@ -1,6 +1,31 @@
 from generators import createGenerators
 from keras.preprocessing.image import ImageDataGenerator
+from random import random
+import cv2
 
+def rand_horizontal_flip(x, y):
+    '''
+       x   -> the numpy multi-dimensional array image\n,
+       y   -> the float representing the steering angle\",
+    '''
+    
+    if random() < 0.5:
+        return cv2.flip(x, 1), -1*y
+    else:
+        return x, y
+
+# define file paths to relevant data
+trainingDataPath = "/opt/carnd_p3/data/"
+csvFilePath = trainingDataPath + "driving_log.csv"
+imagesPath = trainingDataPath + "IMG/"
+
+dataGenParams = {
+#     'fill_mode': 'nearest', 
+#     'zoom_range': 0.2, 
+#     'rotation_range': 7, 
+#     'shear_range': 0.1
+}
+ 
 # create training set and validation set data generators
 batch_size = 32
 train_generator, validation_generator, t_len, v_len = createGenerators(csvFilePath=csvFilePath, 
@@ -12,18 +37,6 @@ train_generator, validation_generator, t_len, v_len = createGenerators(csvFilePa
 import datetime
 from model import train_model
 from helper import update_log
-
-# define file paths to relevant data
-trainingDataPath = "../behavioral_cloning_data/"
-csvFilePath = trainingDataPath + "driving_log.csv"
-imagesPath = trainingDataPath + "IMG/"
-
-dataGenParams = {
-    'fill_mode': 'nearest', 
-    'zoom_range': 0.2, 
-    'rotation_range': 7, 
-    'shear_range': 0.1
-}
 
 saveModelPath = str("model_" + datetime.datetime.now().strftime('%Y-%m-%d_%H_%M_%S') + ".h5")
 
