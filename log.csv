@@ -3,3 +3,4 @@
 
 2018-10-03,21:49,2.57568177658e-09,0.48592234885,"""NVIDIA Architecture""",3,32,"""Adding Valuable Input Data.""","""Stops and starts. Ran off the road to the right."""
 
+2018-10-04,15:13,1.91921774754e-07,0.0131273109701,"""NVIDIA Architecture""",3,100,"""Tripled batch size, slightly decreased how much was being cropped. Running on Udacity Dataset.""","""Drove straight for several seconds. Drove straight off the road..."""

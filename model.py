@@ -5,7 +5,6 @@ import pandas as pd
 from keras.models import Sequential
 from keras.layers import Lambda, Conv2D, Dense, Flatten
 from sklearn.model_selection import train_test_split
-import matplotlib.pyplot as plt
 
 def get_data(csv_file_path, test_size=0.2):
     '''
@@ -29,7 +28,13 @@ def get_data(csv_file_path, test_size=0.2):
     # Load in file with pandas
     df = pd.read_csv(csv_file_path, ",",
                     names=["center", "left", "right", "steering", "throttle", "break", "speed"])
-
+    # drop first row if it is a header
+    if len(df.index) > 0:
+        try:
+            float(df.loc[df.index[0], 'steering'])
+        except ValueError:
+            df = df[1:]
+            
     # Specify our training images and their labels 
     X_df = df[['center', 'left', 'right']].values
     y_df = df['steering'].values
@@ -126,7 +131,7 @@ visualizingData = True
 normalization = lambda x: x/127.5 - 1.
 epochs = 3
 arch_title = '"NVIDIA Architecture"'
-changes = '"Tripled batch size, slightly decreased how much was being cropped."'
+changes = '""'
 batch_size = 100
 
 # Get Training and Validation Data
@@ -134,9 +139,7 @@ X_train, X_valid, y_train, y_valid = get_data(csvFilePath)
 
 # Visualize Data
 if visualizingData:
-    # Visualize Data Before and After Preprocessing then Exit
     # Pandas Histogram Plotting Tutorial: https://realpython.com/python-histograms/
-
     # Visualize Training Data Distribution Before and After Augmentation
     y_train_pp = next(ut.image_data_batch_generator(X=X_train, y=y_train, 
                                 prepreprocessing=ut.training_preprocessing,
@@ -144,24 +147,18 @@ if visualizingData:
 
     print("Original Data Variance  = ", np.var(np.array(y_train, dtype=np.float64)))
     print("Augmented Data Variance = ", np.var(np.array(y_train_pp, dtype=np.float64)))
-
-    ut.save_hist(pd.Series(np.array(y_train)), 
-                title='Training Set Steering Angle Distribution', 
+    
+    ut.save_hist([pd.Series(np.array(y_train)).astype(float), pd.Series(np.array(y_train_pp)).astype(float)],
+                title='Training Set Steering Angle Distributions',  
                 xlabel='Steering Angle', 
                 ylabel='Count', 
+                key=['Original','Augmented'],
                 bins=20, 
-                save_as='images/angle_distribution.jpg')
-
-    ut.save_hist(pd.Series(np.array(y_train_pp)), 
-                title='Augmented Training Set Steering Angle Distribution', 
-                xlabel='Steering Angle', 
-                ylabel='Count', 
-                bins=20, 
-                save_as='images/augmented_angle_distribution.jpg')
+                save_as='images/angle_distributions.jpg')
 
     # Visualize Before and After of Several Preprocessed Images
     count = 3
-
+    
     X_train_images = [ut.read_image(ut.filename_from_path(paths[0])) for i, paths in enumerate(X_train) if i < count]
     X_train_images_pp = [ut.preprocess_image(img) for img in X_train_images]
 
@@ -170,7 +167,7 @@ if visualizingData:
                 columns=count, 
                 row_titles=True, 
                 save_as='images/before_and_after_preprocessing.jpg')
-
+ 
     exit()
 
 # Create NN Model To Train On

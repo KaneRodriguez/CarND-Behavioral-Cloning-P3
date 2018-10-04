@@ -3,36 +3,43 @@ import csv
 import cv2
 import math
 import datetime
+# Fixes issues when running in terminal: https://github.com/ContinuumIO/anaconda-issues/issues/1215#issuecomment-258376409
+import matplotlib as mpl
+mpl.use('Agg')
+import matplotlib.pyplot as plt
+plt.ioff()
 import numpy as np
 from scipy import ndimage
-import matplotlib.pyplot as plt
 from keras.preprocessing.image import ImageDataGenerator
 from sklearn.model_selection import train_test_split
 # from statistics import median
 
 # Define Globals
-DATA_PATH = "../behavioral_cloning_data/"
+DATA_PATH = "../data/" # "../behavioral_cloning_data/"#
 NVIDIA_INPUT_SHAPE = (66, 200, 3)
 
-def save_hist(df, title, xlabel, ylabel, bins, save_as):
+def save_hist(dfs, title, xlabel, ylabel, bins, key, save_as):
     '''
-    Creates a histogram and saves the resulting figure
+    Creates a histogram with data frame each DataFrame in 'dfs' and saves the resulting figure
 
-    df                    -> pandas DataFrame or Series object
+    dfs                   -> array of pandas DataFrames or Series objects
     title, xlabel, ylabel -> plot title, x, and y labels
     bins                  -> the number of bins in which to group the data
+    key                   -> array of labels for the plot legend
     save_as               -> path to where the figure image will be saved
     
     does not return any value
     '''
-    df.plot.hist(grid=True, bins=bins, rwidth=0.85, color='dodgerblue')
-    
+    plt.hist(dfs, bins=bins, rwidth=0.85, label=key)
+    plt.legend(loc='upper right')
+    plt.show()
     plt.title(title)
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     plt.grid(axis='y', alpha=0.8)
 
     plt.savefig(save_as)
+    plt.gcf().clear()
 
 def crop_image(img):
     '''
@@ -277,8 +284,8 @@ def plotImages(images, titles=[""], columns=1, figsize=(20,10), gray=False, save
             title = titles[i]
         elif not row_titles:
             title = titles[i % columns]
-        else:
-            title = titles[i % rows]
+        else: 
+            title = titles[i//columns]
 
         plt.gca().set_title(title)
        
