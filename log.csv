@@ -1,1 +1,3 @@
 2018-10-02,22:56,0.00105970806908,0.0541906952858,"""NVIDIA Architecture""",3,32,"""First Run on 3 Images""","""Drove Straight for a few seconds then fell off to left"""
+2018-10-03,21:18,0.0384859819161,0.137636733055,"""NVIDIA Architecture""",3,32,"""Aggressive cropping and resizing. Random horizontal flipping. Matching the shape mentioned in NVIDIA post.""","""Drove Straight for awhile and then went off the left curb."""
+

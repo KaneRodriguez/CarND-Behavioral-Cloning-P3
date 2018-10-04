@@ -15,12 +15,15 @@ from io import BytesIO
 from keras.models import load_model
 import h5py
 from keras import __version__ as keras_version
+import utils as ut
 
 sio = socketio.Server()
 app = Flask(__name__)
 model = None
 prev_image_array = None
 
+# For Debugging
+saved_example = False
 
 class SimplePIController:
     def __init__(self, Kp, Ki):
@@ -51,6 +54,10 @@ controller.set_desired(set_speed)
 @sio.on('telemetry')
 def telemetry(sid, data):
     if data:
+        # Keep track of if we've saved an example of a 
+        # real time image being preprocessed
+        global saved_example
+
         # The current steering angle of the car
         steering_angle = data["steering_angle"]
         # The current throttle of the car
@@ -61,6 +68,12 @@ def telemetry(sid, data):
         imgString = data["image"]
         image = Image.open(BytesIO(base64.b64decode(imgString)))
         image_array = np.asarray(image)
+        # preprocess the image the same way training images were preprocessed
+        image_array = ut.preprocess_image(image_array)
+        if saved_example is False:
+            saved_example = True
+            ut.plotImages(images=[np.asarray(image), image_array], titles=['Original', 'After'], save_as='images/driving_before_and_after.jpg')
+
         steering_angle = float(model.predict(image_array[None, :, :, :], batch_size=1))
 
         throttle = controller.update(float(speed))

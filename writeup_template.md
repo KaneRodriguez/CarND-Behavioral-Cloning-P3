@@ -16,7 +16,8 @@ The goals / steps of this project are the following:
 
 [//]: # (Image References)
 
-[image1]: ./examples/placeholder.png "Model Visualization"
+[angle_distribution]: ./images/angle_distribution.jpg "angle_distribution"
+[augmented_angle_distribution]: ./images/augmented_angle_distribution.jpg "augmented_angle_distribution"
 [image2]: ./examples/placeholder.png "Grayscaling"
 [image3]: ./examples/placeholder_small.png "Recovery Image"
 [image4]: ./examples/placeholder_small.png "Recovery Image"
@@ -76,11 +77,17 @@ For details about how I created the training data, see the next section.
 
 #### 1. Solution Design Approach
 
-The overall strategy for deriving a model architecture was to ...
+    Modified NVIDIA Architecture w/ minimal Training Data
 
-My first step was to use a convolution neural network model similar to the ... I thought this model might be appropriate because ...
+I initially chose to implement the NVIDIA model architecture, described [here](https://devblogs.nvidia.com/deep-learning-self-driving-cars/), because this model had proven a successfull real-world deep learning solution to this problem.
 
-In order to gauge how well the model was working, I split my image and steering angle data into a training and validation set. I found that my first model had a low mean squared error on the training set but a high mean squared error on the validation set. This implied that the model was overfitting. 
+I adapted the NVIDIA model to this problem by adding a final 1-output fully-connected layer to the end of the architecture. This was done because I wanted only the suggested steering angle (1 output) as a result of each input image fed into the model. 
+
+To evaluate the effectiveness of the model, the model was split into a training set and validation set. Also, I chose to use three training images that consisted of center-lane driving and recovery driving from the left and from the right side of the road.
+
+The first training of the modified NVIDIA model had a low mean squared error on the training set and a high mean squared error on the validation set. This implied that the model was overfitting the training data. This overfitting was likely due to there being only 3 images being used for training and validation. When running the overfitted model in the simulator, the vehicle drove straight for a few seconds before falling off to the left.
+
+To rectify the overfitting, I decided to ... 
 
 To combat the overfitting, I modified the model so that ...
 
@@ -99,6 +106,9 @@ Here is a visualization of the architecture (note: visualizing the architecture 
 ![alt text][image1]
 
 #### 3. Creation of the Training Set & Training Process
+
+![angle_distribution][angle_distribution]
+![augmented_angle_distribution][augmented_angle_distribution]
 
 To capture good driving behavior, I first recorded two laps on track one using center lane driving. Here is an example image of center lane driving:
 

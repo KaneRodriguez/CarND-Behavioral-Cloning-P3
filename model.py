@@ -1,10 +1,11 @@
 import datetime
+import utils as ut
 import numpy as np
 import pandas as pd
 from keras.models import Sequential
 from keras.layers import Lambda, Conv2D, Dense, Flatten
 from sklearn.model_selection import train_test_split
-from utils import image_data_batch_generator, DATA_PATH, update_log
+import matplotlib.pyplot as plt
 
 def get_data(csv_file_path, test_size=0.2):
     '''
@@ -91,10 +92,18 @@ def train_model(model, X_train, X_valid, y_train, y_valid, batch_size=32, epochs
     '''
     # finalize model and specify loss and optimizer functions
     model.compile(loss='mse', optimizer='adam')
-    # train model with generators
-    history_object = model.fit_generator(image_data_batch_generator(X=X_train, y=y_train, batch_size=batch_size), 
+    # create training and validation generators
+    train_gen = ut.image_data_batch_generator(X=X_train, y=y_train, 
+                                            batch_size=batch_size, 
+                                            prepreprocessing=ut.training_preprocessing)
+    valid_gen = ut.image_data_batch_generator(X=X_valid, y=y_valid, 
+                                            batch_size=batch_size, 
+                                            prepreprocessing=ut.validation_preprocessing)
+    # train the model with the training and validation generators
+    # Note: the generators should not manipulate the size of the data!
+    history_object = model.fit_generator(train_gen, 
                                 steps_per_epoch=len(y_train),
-                                validation_data=image_data_batch_generator(X=X_valid, y=y_valid, batch_size=batch_size), 
+                                validation_data=valid_gen, 
                                 validation_steps=len(y_valid), 
                                 epochs=epochs,
                                 verbose=1)
@@ -112,32 +121,71 @@ Main
 '''
 
 # General Setup
-csvFilePath = DATA_PATH + "driving_log.csv"
+csvFilePath = ut.DATA_PATH + "driving_log.csv"
 visualizingData = False
 normalization = lambda x: x/127.5 - 1.
-input_shape = (160, 320, 3)
+epochs = 3
+arch_title = '"NVIDIA Architecture"'
+changes = '"Adding Valuable Input Data."'
 
 # Get Training and Validation Data
 X_train, X_valid, y_train, y_valid = get_data(csvFilePath)
 
 # Visualize Data
 if visualizingData:
-    # TODO Visualize Data Before and After Preprocessing 
-    # Then Exit
+    # Visualize Data Before and After Preprocessing then Exit
+    # Pandas Histogram Plotting Tutorial: https://realpython.com/python-histograms/
+
+    # Visualize Training Data Distribution Before and After Augmentation
+    y_train_pp = next(ut.image_data_batch_generator(X=X_train, y=y_train, 
+                                prepreprocessing=ut.training_preprocessing,
+                                batch_size=len(y_train)))[1]
+
+    print("Original Data Variance  = ", np.var(np.array(y_train, dtype=np.float64)))
+    print("Augmented Data Variance = ", np.var(np.array(y_train_pp, dtype=np.float64)))
+
+    ut.save_hist(pd.Series(np.array(y_train)), 
+                title='Training Set Steering Angle Distribution', 
+                xlabel='Steering Angle', 
+                ylabel='Count', 
+                bins=20, 
+                save_as='images/angle_distribution.jpg')
+
+    ut.save_hist(pd.Series(np.array(y_train_pp)), 
+                title='Augmented Training Set Steering Angle Distribution', 
+                xlabel='Steering Angle', 
+                ylabel='Count', 
+                bins=20, 
+                save_as='images/augmented_angle_distribution.jpg')
+
+    # Visualize Before and After of Several Preprocessed Images
+    count = 3
+
+    X_train_images = [ut.read_image(ut.filename_from_path(paths[0])) for i, paths in enumerate(X_train) if i < count]
+    X_train_images_pp = [ut.preprocess_image(img) for img in X_train_images]
+
+    ut.plotImages(images=X_train_images + X_train_images_pp, 
+                titles=['Before', 'After'], 
+                columns=count, 
+                row_titles=True, 
+                save_as='images/before_and_after_preprocessing.jpg')
+
     exit()
-    pass
 
 # Create NN Model To Train On
-model = create_model(input_shape=input_shape, normalization=normalization)
+model = create_model(input_shape=ut.NVIDIA_INPUT_SHAPE, normalization=normalization)
 
 # Train Model
 saveModelPath = str("model_" + datetime.datetime.now().strftime('%Y-%m-%d_%H_%M_%S') + ".h5")
-history_object = train_model(model, X_train, X_valid, y_train, y_valid, save_model_path=saveModelPath)
+history_object = train_model(model, 
+                            X_train, X_valid, y_train, y_valid, 
+                            save_model_path=saveModelPath,
+                            epochs=epochs)
 
 # Update Log
-update_log(history_object=history_object, 
+ut.update_log(history_object=history_object, 
            batch_size=32,
-           arch_title='"NVIDIA Architecture"', 
-           changes='"First Run"')
+           arch_title=arch_title, 
+           changes=changes)
 
 print("Saved: ", saveModelPath)
