@@ -122,11 +122,12 @@ Main
 
 # General Setup
 csvFilePath = ut.DATA_PATH + "driving_log.csv"
-visualizingData = False
+visualizingData = True
 normalization = lambda x: x/127.5 - 1.
 epochs = 3
 arch_title = '"NVIDIA Architecture"'
-changes = '"Adding Valuable Input Data."'
+changes = '"Tripled batch size, slightly decreased how much was being cropped."'
+batch_size = 100
 
 # Get Training and Validation Data
 X_train, X_valid, y_train, y_valid = get_data(csvFilePath)
@@ -184,7 +185,7 @@ history_object = train_model(model,
 
 # Update Log
 ut.update_log(history_object=history_object, 
-           batch_size=32,
+           batch_size=batch_size,
            arch_title=arch_title, 
            changes=changes)
 

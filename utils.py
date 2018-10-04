@@ -40,9 +40,13 @@ def crop_image(img):
 
     img -> 160 x 320 x 3 RGB image
 
-    returns a 15? x 320 x 3 RGB image
+    returns a ? x 320 x 3 RGB image
+
+    NOTE:
+
+    Check out this sweeeet article: http://davidaventimiglia.com/carnd_behavioral_cloning_part1.html
     '''
-    return img[120:-25, :,:]
+    return img[81:-22, :,:]
 
 def resize_image(img, dsize):
     '''
@@ -68,7 +72,7 @@ def preprocess_image(img):
     fed to the model for prediction. 
     '''
     global NVIDIA_INPUT_SHAPE
-    
+
     # Grab desired image shape
     h, w, c = NVIDIA_INPUT_SHAPE
     # Crop the image
