@@ -46,10 +46,9 @@ class SimplePIController:
         return self.Kp * self.error + self.Ki * self.integral
 
 
-controller = SimplePIController(0.1, 0.002)
-set_speed = 9
+controller = SimplePIController(0.01, 0.002)
+set_speed = 20
 controller.set_desired(set_speed)
-
 
 @sio.on('telemetry')
 def telemetry(sid, data):
@@ -70,10 +69,12 @@ def telemetry(sid, data):
         image_array = np.asarray(image)
         # preprocess the image the same way training images were preprocessed
         image_array = ut.preprocess_image(image_array)
+	# save an example of an image before and after preprocessing (just once though!)
         if saved_example is False:
             saved_example = True
             ut.plotImages(images=[np.asarray(image), image_array], titles=['Original', 'After'], save_as='images/driving_before_and_after.jpg')
 
+	# predict steering angle with the model
         steering_angle = float(model.predict(image_array[None, :, :, :], batch_size=1))
 
         throttle = controller.update(float(speed))
