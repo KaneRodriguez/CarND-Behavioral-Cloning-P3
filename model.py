@@ -1,57 +1,52 @@
+import os
 import datetime
 import utils as ut
 import numpy as np
 import pandas as pd
 from keras.models import Sequential
-from keras.layers import Lambda, Conv2D, Dense, Flatten
+from keras.layers import Lambda, Conv2D, Dense, Flatten, MaxPool2D, Dropout, Activation
+from keras.layers.normalization import BatchNormalization
 from sklearn.model_selection import train_test_split
 
-def get_data(csv_file_path, test_size=0.2):
+def get_data(data_paths, test_size=0.2):
     '''
-    Loads data in from a csv file and outputs the resulting training and validation images 
+    Loads csv file data found in each data path and outputs the resulting training and validation images 
     and labels.
 
-    csv_file_path -> full file path to the csv file holding the data
+    data_paths    -> file pathd to the csv files holding the data
     test_size     -> Percentage of data set aside for validation (float between 0. and 1.)
     
     returns training and validation data (X_train, X_valid, y_train, y_valid) where:
         X_train/X_valid -> N x 3 matrices that contain image names for the center, left, and right columns
         y_train/y_valid -> N x 1 matrices that contain every steering angle
-
-    NOTE:
-    
-    The csv file should contain data in the following order:
-    
-    Center Image, Left Image, Right Image, Steering Angle, Throttle, Break, and Speed
-    0,            1,          2,           3,              4,        5,         6
     '''
-    # Load in file with pandas
-    df = pd.read_csv(csv_file_path, ",",
-                    names=["center", "left", "right", "steering", "throttle", "break", "speed"])
-    # drop first row if it is a header
-    if len(df.index) > 0:
-        try:
-            float(df.loc[df.index[0], 'steering'])
-        except ValueError:
-            df = df[1:]
-            
-    # Specify our training images and their labels 
-    X_df = df[['center', 'left', 'right']].values
-    y_df = df['steering'].values
-
+    dfs = None
+    # Load each dataframe
+    dfs = pd.concat([ut.load_driving_csv_df(path) for path in data_paths])
+    # Specify our training images and their labels  
+    X_df = dfs[['center', 'left', 'right']].values
+    y_df = dfs['steering'].values
     # Split our data into training and validation sets and return the result
     return train_test_split(X_df, y_df, test_size=test_size)
 
-def create_model(input_shape, normalization=lambda x: x):
+def create_model(input_shape, normalization=lambda x: x, drop_rate = 0.0):
     '''
     Creates a modified version of the NVIDIA Model outlined in the post found @ https://devblogs.nvidia.com/deep-learning-self-driving-cars/
 
     input_shape   -> shape of the input to the model
     normalization -> function that normalizes input fed to the model
-
+    drop_rate     -> Data to be dropped in the Dropouts used in this model
+    
     returns a Keras Model
-
+    
+    NOTE:
+    
+    Read about dropout, variations of dropout, and various regularization techniques in the following paper: 
+    https://jyx.jyu.fi/bitstream/handle/123456789/59287/URN%3ANBN%3Afi%3Ajyu-201808213890.pdf?sequence=1&isAllowed=y
+    
+    Read about a debate over where to put Batch Normalization: https://stackoverflow.com/questions/34716454/where-do-i-call-the-batchnormalization-function-in-keras
     '''
+        
     # Create Sequential Model
     model = Sequential()
 
@@ -61,46 +56,60 @@ def create_model(input_shape, normalization=lambda x: x):
     # Three convolutional layers with a 2×2 stride and a 5×5 kernel
     model.add(Conv2D(filters=24, kernel_size=5, strides=2, padding='valid', activation='relu'))
     model.add(Conv2D(filters=36, kernel_size=5, strides=2, padding='valid', activation='relu'))
-    model.add(Conv2D(filters=48, kernel_size=5, strides=2, padding='valid', activation='relu'))
-
+    model.add(Conv2D(filters=48, kernel_size=5, strides=2, padding='valid'))
+    
+    # Batch Normalization before RELU, followed by Dropout (both to help with regularization)
+    model.add(BatchNormalization())
+    model.add(Activation('relu'))
+    model.add(Dropout(drop_rate))
+    
     # Two non-strided convolution with a 3×3 kernel size
     model.add(Conv2D(filters=64, kernel_size=3, padding='valid', activation='relu'))
-    model.add(Conv2D(filters=64, kernel_size=3, padding='valid', activation='relu'))
-
+    model.add(Conv2D(filters=64, kernel_size=3, padding='valid'))
+ 
+    # Batch Normalization before RELU, followed by Dropout (both to help with regularization)
+    model.add(BatchNormalization())
+    model.add(Activation('relu'))
+    model.add(Dropout(drop_rate))
+    
     # Flatten
     model.add(Flatten())
-
+    
     # Three fully connected layers
     model.add(Dense(100, activation='relu'))
     model.add(Dense(50, activation='relu'))
-    model.add(Dense(10))
+    model.add(Dense(10, activation='relu'))
     
     # Final connected layer
     model.add(Dense(1))
 
     return model
 
-def train_model(model, X_train, X_valid, y_train, y_valid, batch_size=32, epochs=3, save_model_path="model.h5"):
+def train_model(model, X_train, X_valid, y_train, y_valid, batch_size=32, epochs=3, save_model_path="model.h5", pretrained_weights=None):
     '''
     Trains a model with an Adam optimizer, a Mean Squared Error loss function, and with 
     training and validation data generated by the utility image_data_batch_generator function.
 
-    model           -> a Keras model
-    X_train/X_valid -> N x 3 matrices that contain image names for the center, left, and right columns
-    y_train/y_valid -> N x 1 matrices that contain every steering angle
-    batch_size      -> how large is each batch for each epoch
-    epochs          -> the number of epochs used to train this model
-    save_model_path -> string that specifies the file where the resulting model weights will be saved
+    model               -> a Keras model
+    X_train/X_valid     -> N x 3 matrices that contain image names for the center, left, and right columns
+    y_train/y_valid     -> N x 1 matrices that contain every steering angle
+    batch_size          -> how large is each batch for each epoch
+    epochs              -> the number of epochs used to train this model
+    save_model_path     -> string that specifies the file where the resulting model weights will be saved
+    pretrained_weights  -> name of *.h5 file that holds pretrained weights for this specific model
 
     returns a history object of the trained model
 
     '''
     # finalize model and specify loss and optimizer functions
     model.compile(loss='mse', optimizer='adam')
+    # initialize with pretrained weights (if there are any)
+    if pretrained_weights is not None:
+        model.load_weights(pretrained_weights)
     # create training and validation generators
     train_gen = ut.image_data_batch_generator(X=X_train, y=y_train, 
                                             batch_size=batch_size, 
-                                            prepreprocessing=ut.training_preprocessing)
+                                            prepreprocessing=ut.training_preprocessing, training=True)
     valid_gen = ut.image_data_batch_generator(X=X_valid, y=y_valid, 
                                             batch_size=batch_size, 
                                             prepreprocessing=ut.validation_preprocessing)
@@ -126,59 +135,38 @@ Main
 '''
 
 # General Setup
-csvFilePath = ut.DATA_PATH + "driving_log.csv"
-visualizingData = True
+dataPaths = ['../recovery_data', '../recovery_data2', '../recovery_data3']
+visualizingData = False
 normalization = lambda x: x/127.5 - 1.
 epochs = 3
 arch_title = '"NVIDIA Architecture"'
-changes = '""'
+changes = '"Initializing model with weights of last layer. Training on more recovery driving data. This time, I emphasized on gradual recovery to lane center (instead of immediate max turn away from edges)."'
+pretrained_weights = 'model_2018-10-07_22_56_39.h5' # Set to 'None' if not using pretrained weights
 batch_size = 100
 
 # Get Training and Validation Data
-X_train, X_valid, y_train, y_valid = get_data(csvFilePath)
+X_train, X_valid, y_train, y_valid = get_data(dataPaths)
 
 # Visualize Data
 if visualizingData:
-    # Pandas Histogram Plotting Tutorial: https://realpython.com/python-histograms/
-    # Visualize Training Data Distribution Before and After Augmentation
-    y_train_pp = next(ut.image_data_batch_generator(X=X_train, y=y_train, 
-                                prepreprocessing=ut.training_preprocessing,
-                                batch_size=len(y_train)))[1]
+    # Visualize Dristribution of Steering Angles and 
+    ut.visualize_training_pipeline(X=X_train, y=y_train, count=1)
 
-    print("Original Data Variance  = ", np.var(np.array(y_train, dtype=np.float64)))
-    print("Augmented Data Variance = ", np.var(np.array(y_train_pp, dtype=np.float64)))
-    
-    ut.save_hist([pd.Series(np.array(y_train)).astype(float), pd.Series(np.array(y_train_pp)).astype(float)],
-                title='Training Set Steering Angle Distributions',  
-                xlabel='Steering Angle', 
-                ylabel='Count', 
-                key=['Original','Augmented'],
-                bins=20, 
-                save_as='images/angle_distributions.jpg')
+    # Visualize Before and After of Several Preprocessed and Augmented Images
+    ut.visualize_processed_data(count=4, X=X_train, y=y_train, save_as='images/preprocessing_visualization.jpg')
 
-    # Visualize Before and After of Several Preprocessed Images
-    count = 3
-    
-    X_train_images = [ut.read_image(ut.filename_from_path(paths[0])) for i, paths in enumerate(X_train) if i < count]
-    X_train_images_pp = [ut.preprocess_image(img) for img in X_train_images]
-
-    ut.plotImages(images=X_train_images + X_train_images_pp, 
-                titles=['Before', 'After'], 
-                columns=count, 
-                row_titles=True, 
-                save_as='images/before_and_after_preprocessing.jpg')
- 
     exit()
 
 # Create NN Model To Train On
-model = create_model(input_shape=ut.NVIDIA_INPUT_SHAPE, normalization=normalization)
+model = create_model(input_shape=ut.NVIDIA_INPUT_SHAPE, normalization=normalization, drop_rate=0.5)
 
 # Train Model
 saveModelPath = str("model_" + datetime.datetime.now().strftime('%Y-%m-%d_%H_%M_%S') + ".h5")
 history_object = train_model(model, 
                             X_train, X_valid, y_train, y_valid, 
                             save_model_path=saveModelPath,
-                            epochs=epochs)
+                            epochs=epochs,
+                            pretrained_weights=pretrained_weights)
 
 # Update Log
 ut.update_log(history_object=history_object, 

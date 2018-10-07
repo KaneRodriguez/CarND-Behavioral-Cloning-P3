@@ -1,4 +1,5 @@
 import os
+from pathlib import Path, PureWindowsPath
 import csv
 import cv2
 import math
@@ -9,19 +10,107 @@ mpl.use('Agg')
 import matplotlib.pyplot as plt
 plt.ioff()
 import numpy as np
+import pandas as pd
 from scipy import ndimage
 from keras.preprocessing.image import ImageDataGenerator
 from sklearn.model_selection import train_test_split
-# from statistics import median
+from sklearn.utils import shuffle
 
 # Define Globals
-DATA_PATH = "../data/" # "../behavioral_cloning_data/"#
 NVIDIA_INPUT_SHAPE = (66, 200, 3)
 
-def save_hist(dfs, title, xlabel, ylabel, bins, key, save_as):
+def load_driving_csv_df(dataPath):
+    ''' 
+    Loads in a 'driving_log.csv' file found at the given file path 
+    into a pandas dataframe and returns the result
+    
+    dataPath  -> file path to the csv file
+    
+    returns a pandas data frame
+    
+    NOTE:
+    
+    The csv files should contain data in the following order:
+    
+    Center Image, Left Image, Right Image, Steering Angle, Throttle, Break, and Speed
+    0,            1,          2,           3,              4,        5,         6
     '''
-    Creates a histogram with data frame each DataFrame in 'dfs' and saves the resulting figure
+    # driving data expected in 'driving_log.csv' files
+    csv_file_path = os.path.join(dataPath, 'driving_log.csv')
+    # Load in file with pandas
+    df = pd.read_csv(csv_file_path, ",",
+                     names=["center", "left", "right", "steering", "throttle", "break", "speed"])
+    # drop first row if it is a header
+    if len(df.index) > 0:
+        try:
+            float(df.loc[df.index[0], 'steering'])
+        except ValueError:
+            df = df[1:]
+            
+    # strip out all but image name and replace with '../DATA_PATH/IMG/IMAGE_NAME.jpg'
+    strip = lambda x: (Path(dataPath) / Path('IMG') / PureWindowsPath(x).name)
+    df['center'] = df['center'].map(strip)
+    df['left'] = df['left'].map(strip)
+    df['right'] = df['right'].map(strip)
+    
+    return df
+                
+def visualize_processed_data(X, y, count, save_as):
+    '''
+    Visualize data before and after preprocessing and augmentation
+    
+    X       -> list of center, left, and right image data
+    y       -> list of angles
+    count   -> how many images to visualize
+    save_as -> where to save the plot
+    
+    does not return a value
+    '''
+    # Get Feasible Count
+    count = min(count,len(X))
+    # Prepare Dict to Store Visualization Data in
+    vis_data = {
+        'images':{
+            'orig':[],
+            'pp':[],
+            'aug':[]
+        }, 
+        'angles':{
+            'orig':[],
+            'pp':[],
+            'aug':[]
+        }
+     }
+    # Loop through data and preprocess, augment, and store the results
+    for i, (paths, angle) in enumerate(zip(X[:count], y[:count])):
+        image_path, angle = rand_choose_camera(paths, float(angle))
+        img = ndimage.imread(image_path)
+        # store original
+        vis_data['images']['orig'].append(img)
+        vis_data['angles']['orig'].append(angle)
+        # store preprocessed                           
+        tmpImg, tmpAng = validation_preprocessing(np.copy(img), angle)
+        vis_data['images']['pp'].append(tmpImg)
+        vis_data['angles']['pp'].append(tmpAng)
+        # store preprocessed + augmented 
+        tmpImg, tmpAng = augment_image(np.copy(tmpImg), tmpAng)
+        vis_data['images']['aug'].append(tmpImg)
+        vis_data['angles']['aug'].append(tmpAng)   
+        
+    # Combine all visualization images and angles
+    vis_images = vis_data['images']['orig'] + vis_data['images']['pp'] + vis_data['images']['aug']
+    vis_angles = vis_data['angles']['orig'] + vis_data['angles']['pp'] + vis_data['angles']['aug']
+    
+    # Save Visualizations
+    plotImages(images=vis_images, 
+                titles=vis_angles, 
+                columns=count, 
+                save_as=save_as)
 
+def save_kde(dfs, title, xlabel, ylabel, bins, key, save_as):
+    '''
+    Creates a kde chart from each DataFrame in 'dfs' and saves the resulting figure
+l
     dfs                   -> array of pandas DataFrames or Series objects
     title, xlabel, ylabel -> plot title, x, and y labels
     bins                  -> the number of bins in which to group the data
@@ -30,17 +119,47 @@ def save_hist(dfs, title, xlabel, ylabel, bins, key, save_as):
     
     does not return any value
     '''
-    plt.hist(dfs, bins=bins, rwidth=0.85, label=key)
-    plt.legend(loc='upper right')
-    plt.show()
+    fig, ax = plt.subplots()
+    
+    #plt.hist(dfs, bins=bins, rwidth=0.85, alpha=0.8, label=key)
+   
+    for i, df in enumerate(dfs):
+      df.plot.kde(ax=ax, secondary_y=False, label=key[i])
+       
+    ax.legend(loc='upper right') 
     plt.title(title)
-    plt.xlabel(xlabel)
+    plt.xlabel(xlabel) 
     plt.ylabel(ylabel)
-    plt.grid(axis='y', alpha=0.8)
+    plt.grid(axis='y', alpha=0.9)
 
     plt.savefig(save_as)
     plt.gcf().clear()
 
+def rand_choose_camera(cameras, angle):
+    '''
+    Randomly choose the center, left, or right camera.
+    
+    cameras -> List of Center, Left, and Right camera images/filepaths
+    angle   -> the angle for the center camera
+    
+    returns a tuple of (camera, angle)
+    
+    NOTE:
+    The data in cameras is not accessed, so passing in either file path or image works
+    
+    Also, the adjustment angle was based on: https://github.com/jeremy-shannon/CarND-Behavioral-Cloning-Project
+    '''
+    # Choose a random camera
+    choice = np.random.choice(3, 1)[0]
+    # Mutate angle based on which camera
+    offset = 0.26
+    cam_switch = {
+        0: lambda a: a, # Center
+        1: lambda a: a + offset, # Left
+        2: lambda a: a - offset # Right
+    }
+    return cameras[choice], cam_switch[choice](angle)
+    
 def crop_image(img):
     '''
     Crops the image to cut off the bottom car hood and top sky
@@ -66,6 +185,58 @@ def resize_image(img, dsize):
     '''
     return cv2.resize(img, dsize)
 
+def rand_translate(img, angle):
+    '''
+    Translates an image by a random x and random y
+    
+    img   -> input image
+    angle -> steering angle
+
+    NOTE:
+    Chosen angle to pixel ratio chosen from here: https://towardsdatascience.com/teaching-cars-to-drive-using-deep-learning-steering-angle-prediction-5773154608f2
+    '''
+    # Grab image dimensions
+    h, w, c = img.shape
+    # Define Angle Change per Pixel 
+    angle_per_x_pixel = 0.0035
+    # shift x and y by a random percentage 
+    # of a fraction of the width and height
+    x_shift = (np.random.rand()*2.-1.)*(w/7.)
+    y_shift = (np.random.rand()*2.-1.)*(h/22.)
+    # create transformation matrix
+    M = np.float32([ [1,0,x_shift], # x-shift
+                     [0,1,y_shift]  # y-shift
+                   ])
+    # apply transformation matrix to the full image
+    img = cv2.warpAffine(img, M, (w, h))
+    # adjust angle based on number of shifted x pixels
+    angle += x_shift*angle_per_x_pixel
+    
+    return img, angle 
+
+def visualize_training_pipeline(X, y, count=1):
+    '''
+    Visualize Training Data Distribution Before and After Augmentation, as well
+    as visualizations of each stage of the pipeline.
+    '''
+    # Pandas Histogram Plotting Tutorial: https://realpython.com/python-histograms/
+    y_pp = next(image_data_batch_generator(X=X, y=y, 
+                                prepreprocessing=training_preprocessing,
+                                training=True,
+                                batch_size=len(y)))[1]
+    
+    save_kde([pd.Series(np.array(y)).astype(float), pd.Series(np.array(y_pp)).astype(float)],
+                title='Training Set Steering Angle KDE Distributions',  
+                xlabel='Steering Angle', 
+                ylabel='Density', 
+                key=['Original','Augmented'],
+                bins=20, 
+                save_as= 'images/angle_distributions.jpg' )
+    # Follow one image through it's pipeline
+    funcs = []
+    save_images = [f(img) for f in funcs]
+    save_titles = []
+
 def preprocess_image(img):
     '''
     Applies preprocessing techniques to the input img.
@@ -84,7 +255,7 @@ def preprocess_image(img):
     h, w, c = NVIDIA_INPUT_SHAPE
     # Crop the image
     img = crop_image(img)
-    # Resize the image back to it's original dimensions
+    # Resize image to the desired model input shape
     img = resize_image(img, (w,h))
     # Convert to YUV?
     # Other?
@@ -93,7 +264,8 @@ def preprocess_image(img):
 
 def augment_image(img, angle):
     '''
-    Augments the given image and angle in order to achieve close to zero variance in steering angle distribution.
+    Augments the given image and angle in order to help achieve 
+    close to zero variance in steering angle distribution.
 
     img   -> input image
     angle -> steering angle
@@ -102,52 +274,30 @@ def augment_image(img, angle):
     '''
     # Randomly flip the image horizontally
     img, angle = rand_horizontal_flip(img, angle)
-
+    # Randomly translate the image
+    img, angle = rand_translate(img, angle)
+    # Brightness?
+    # Rotation?
+    # Shadow?
+    # Other?
     return img, angle 
 
 def rand_horizontal_flip(img, angle):
     '''
     Randomly flips the input image and reverses angle direction.
 
-    img -> an image of any dimensions
-
+    img   -> an image of any dimensions
+    angle -> steering angle
+    
     returns a tuple of (img, angle)
     '''
     if np.random.rand() < 0.5:
         # flip the image horizontally
-        cv2.flip(img, 1)
+        img = cv2.flip(img, 1)
         # reverse the sign of the steering angle
         angle *= -1
     
     return img, angle
-
-def filename_from_path(path):
-    '''
-    Gets filename from path
-
-    path -> path to the file (including the file name and extension)
-
-    returns the file name (including the extension)
-    '''
-    return path.split('/')[-1].split('\\')[-1]
-
-def read_image(fileName):
-    '''
-    Reads in an RGB? image
-
-    fileName -> name and extension of the image file (does not include any path)
-
-    returns a 3 Channel RGB image
-    
-    NOTE:
-
-    The path to the file itself is a global variable
-    '''
-    # use the globally defined path to the data to define our IMG directoy
-    global DATA_PATH
-    img_dir = DATA_PATH + "IMG/"
-
-    return ndimage.imread(img_dir + fileName)
 
 def validation_preprocessing(x, y):
     '''
@@ -175,10 +325,10 @@ def training_preprocessing(x, y):
 
     returns a tuple (x, y) where x is the same shape as the input imag and y is the angle label
     '''
-    # Augment the data then apply prediction preprocessing to the data
-    return validation_preprocessing(*augment_image(x,y))
+    # Apply preprocessing to the data then augment the data
+    return augment_image(*validation_preprocessing(x, y))
 
-def image_data_batch_generator(X, y, batch_size=32, data_gen=ImageDataGenerator(), prepreprocessing=lambda x,y: (x,y)):
+def image_data_batch_generator(X, y, batch_size=32, prepreprocessing=lambda x,y: (x,y), training=False):
     '''
     Creates a generator that applies an ImageDataGenerator and custom prepreprocessing logic 
     while loading training images and labels.
@@ -186,17 +336,20 @@ def image_data_batch_generator(X, y, batch_size=32, data_gen=ImageDataGenerator(
     X                -> n x 3 matrix w/ center, left, and right image names
     y                -> n x 1 matrix w/ steering data
     batch_size       -> how large is each batch
-    data_gen         -> image preprocessing generator to be used
-    prepreprocessing -> function to apply to batch images before they are fed to the image preprocessing generator
+    prepreprocessing -> function to apply to batch images
+    training         -> speficies if this is training data
     
     returns a generator that returns batched, loaded, and preprocessed X and y data
 
     NOTE:
 
-    See this blog post for more info on creating generators for the 'fit_generator' Keras function:
+    When 'training' is set, the center image will be chosen for all X batch data
+
+    Also, see this blog post for more info on creating generators for the 'fit_generator' Keras function:
     https://medium.com/@fromtheast/implement-fit-generator-in-keras-61aa2786ce98
-    
     '''    
+    # Shuffle the data
+    X, y = shuffle(X, y)
     # generators loop forever
     while 1:
         # run through each batch of X & y
@@ -209,25 +362,20 @@ def image_data_batch_generator(X, y, batch_size=32, data_gen=ImageDataGenerator(
             angles = []
             # loop through each batch
             for image_names, angle in zip(batch_X, batch_y):
-                # TODO: method for using all of images OR for choosing amongst them and 
-                #       updating their respective label accordingly
-                # Use the first image (center) for now
-                center_image = read_image(filename_from_path(image_names[0]))
-                center_angle = float(angle)
+                # Make angle into a float
+                angle = float(angle)
+                # Randomly choose an image to load if training or load center image if not training
+                image_path, cur_angle = (rand_choose_camera(image_names, angle), (image_names[0], angle))[training]
+                # Load Image 
+                loaded_image = ndimage.imread(image_path)
                 # apply any pre-preprocessing necessary
-                center_image, center_angle = prepreprocessing(center_image, center_angle)
+                loaded_image, cur_angle = prepreprocessing(loaded_image, cur_angle)
                 # add image and angle to current batch containers
-                images.append(center_image)
-                angles.append(center_angle)
+                images.append(loaded_image)
+                angles.append(cur_angle)
 
-            # convert lists to numpy arrays
-            images = np.array(images)
-            angles = np.array(angles)
-            # fit the preprocessing generator to images (TODO: might not be needed)
-            data_gen.fit(images)
-            # preprocess the images and return the result (this for loop runs once due to batch_size being the current batches size)
-            for x_batch, y_batch in data_gen.flow(x=images, y=angles, batch_size=len(images), shuffle=True):
-                yield x_batch, y_batch
+            # convert lists to numpy arrays and return the result
+            yield np.array(images), np.array(angles)
 
 '''
 Helper for logging information on previous model training session

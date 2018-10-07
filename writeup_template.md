@@ -13,12 +13,10 @@ The goals / steps of this project are the following:
 * Test that the model successfully drives around track one without leaving the road
 * Summarize the results with a written report
 
-
 [//]: # (Image References)
 
-[angle_distribution]: ./images/angle_distribution.jpg "angle_distribution"
-[augmented_angle_distribution]: ./images/augmented_angle_distribution.jpg "augmented_angle_distribution"
-[image2]: ./examples/placeholder.png "Grayscaling"
+[angle_distributions]: ./images/angle_distributions.jpg "angle_distributions"
+[preprocessing_visualization]: ./images/preprocessing_visualization.jpg "preprocessing_visualization"
 [image3]: ./examples/placeholder_small.png "Recovery Image"
 [image4]: ./examples/placeholder_small.png "Recovery Image"
 [image5]: ./examples/placeholder_small.png "Recovery Image"
@@ -47,7 +45,13 @@ python drive.py model.h5
 
 #### 3. Submission code is usable and readable
 
-The model.py file contains the code for training and saving the convolution neural network. The file shows the pipeline I used for training and validating the model, and it contains comments to explain how the code works.
+The code for my final solution to the problem is split amongst 2 files.
+
+##### model.py
+
+This file contains the code for getting training and validation data, creating the model in keras, some setup for visualizing training data, and code for training and saving the model with our data. 
+
+##### utils.py
 
 ### Model Architecture and Training Strategy
 
