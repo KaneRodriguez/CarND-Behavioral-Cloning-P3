@@ -4,6 +4,7 @@ import csv
 import cv2
 import math
 import datetime
+from inspect import signature
 # Fixes issues when running in terminal: https://github.com/ContinuumIO/anaconda-issues/issues/1215#issuecomment-258376409
 import matplotlib as mpl
 mpl.use('Agg')
@@ -12,6 +13,7 @@ plt.ioff()
 import numpy as np
 import pandas as pd
 from scipy import ndimage
+from scipy import misc
 from keras.preprocessing.image import ImageDataGenerator
 from sklearn.model_selection import train_test_split
 from sklearn.utils import shuffle
@@ -57,7 +59,7 @@ def load_driving_csv_df(dataPath):
                 
 def visualize_processed_data(X, y, count, save_as):
     '''
-    Visualize data before and after preprocessing and augmentation
+    Visualize data before, during, and after preprocessing and augmentation
     
     X       -> list of center, left, and right image data
     y       -> list of angles
@@ -68,79 +70,109 @@ def visualize_processed_data(X, y, count, save_as):
     '''
     # Get Feasible Count
     count = min(count,len(X))
-    # Prepare Dict to Store Visualization Data in
-    vis_data = {
-        'images':{
-            'orig':[],
-            'pp':[],
-            'aug':[]
-        }, 
-        'angles':{
-            'orig':[],
-            'pp':[],
-            'aug':[]
-        }
-     }
-    # Loop through data and preprocess, augment, and store the results
-    for i, (paths, angle) in enumerate(zip(X[:count], y[:count])):
-        image_path, angle = rand_choose_camera(paths, float(angle))
-        img = ndimage.imread(image_path)
-        # store original
-        vis_data['images']['orig'].append(img)
-        vis_data['angles']['orig'].append(angle)
-        # store preprocessed                           
-        tmpImg, tmpAng = validation_preprocessing(np.copy(img), angle)
-        vis_data['images']['pp'].append(tmpImg)
-        vis_data['angles']['pp'].append(tmpAng)
-        # store preprocessed + augmented 
-        tmpImg, tmpAng = augment_image(np.copy(tmpImg), tmpAng)
-        vis_data['images']['aug'].append(tmpImg)
-        vis_data['angles']['aug'].append(tmpAng)   
-        
-    # Combine all visualization images and angles
-    vis_images = vis_data['images']['orig'] + vis_data['images']['pp'] + vis_data['images']['aug']
-    vis_angles = vis_data['angles']['orig'] + vis_data['angles']['pp'] + vis_data['angles']['aug']
+    # Save Visualizations of Camera Examples
+    cam_images, cam_angles, cam_titles = [], [], []
+    for cnt in range(count):
+        for i in range(3):
+            img, angle = rand_choose_camera(X[cnt], y[cnt], override=i)
+            cam_images += [img]
+            cam_angles += [angle]     
+            
+        cam_titles += ['Center @ ' + str(cam_angles[cnt]), 'Left @ ' + str(cam_angles[cnt + 1]), 'Right @ ' + str(cam_angles[cnt + 2])]
+    plotImages(images=[ndimage.imread(path) for path in cam_images],
+               titles=cam_titles,
+               columns=len(cam_images)//count,
+               save_as="images/camera_views.jpg")
     
-    # Save Visualizations
+    # Save visualizations of the entire pipeline (Note: Got lazy at this point and just coded what i needed so.. TODO: cleanup)
+    vis_images, vis_angles, vis_titles = [], [], []
+    for i in range(count):
+        vis_titles += ['Chosen Camera', 'Cropped', 'Resized', 'Rand Horizontal Flip', 'Rand Translate']
+        vis_img, vis_angle = rand_choose_camera(X[i], float(y[i]))
+        vis_img = ndimage.imread(vis_img)
+        vis_images += [vis_img]
+        vis_angles += [vis_angle]
+        vis_img = crop_image(vis_img)
+        vis_images += [vis_img]
+        vis_angles += [vis_angle]
+        global NVIDIA_INPUT_SHAPE
+        # Grab desired image shape
+        h, w, c = NVIDIA_INPUT_SHAPE
+        vis_img = resize_image(vis_img, (w, h))
+        vis_images += [vis_img]
+        vis_angles += [vis_angle] 
+        vis_img, vis_angle = rand_horizontal_flip(vis_img, vis_angle, force=True)
+        vis_images += [vis_img]
+        vis_angles += [vis_angle]
+        vis_img, vis_angle = rand_translate(vis_img, vis_angle)
+        vis_images += [vis_img]
+        vis_angles += [vis_angle]
+    
     plotImages(images=vis_images, 
-                titles=vis_angles, 
-                columns=count, 
-                save_as=save_as)
+               titles=[str(t + ": Angle = " + format(a, '.3f')) for a, t in zip(vis_angles, vis_titles)],
+               columns=len(vis_images)//count, 
+               save_as="images/processing_stages.jpg")
+    
+    # Create Visualizations of the Entire Data Set
+    y_pp = next(image_data_batch_generator(X=X, y=y, 
+                                prepreprocessing=training_preprocessing,
+                                training=True,
+                                batch_size=len(y)))[1]
+    
+    save_hist([pd.Series(np.array(y)).astype(float), pd.Series(np.array(y_pp)).astype(float)],
+                title='Training Set Steering Angle Distributions',  
+                xlabel='Steering Angle', 
+                ylabel='Count', 
+                key=['Original','Augmented'],
+                bins=30, 
+                save_as= 'images/angle_distributions.jpg',
+                xlim=[-0.75, 0.75],
+                ylim=[0, 2500])
+    
 
-def save_kde(dfs, title, xlabel, ylabel, bins, key, save_as):
+def save_hist(dfs, title, xlabel, ylabel, bins, key, save_as, xlim=None, ylim=None):
     '''
-    Creates a kde chart from each DataFrame in 'dfs' and saves the resulting figure
+    Creates a chart from each DataFrame in 'dfs' and saves the resulting figure
 l
     dfs                   -> array of pandas DataFrames or Series objects
     title, xlabel, ylabel -> plot title, x, and y labels
     bins                  -> the number of bins in which to group the data
     key                   -> array of labels for the plot legend
     save_as               -> path to where the figure image will be saved
+    xlim, ylim            -> x and y axes limits (see matplotlib.pyplot doc for these functions)
     
     does not return any value
     '''
     fig, ax = plt.subplots()
     
-    #plt.hist(dfs, bins=bins, rwidth=0.85, alpha=0.8, label=key)
+    plt.hist(dfs, bins=bins, rwidth=0.85, alpha=0.8, label=key)
    
-    for i, df in enumerate(dfs):
-      df.plot.kde(ax=ax, secondary_y=False, label=key[i])
-       
+    if xlim is not None:
+        plt.xlim(xlim)
+    if ylim is not None:
+        plt.ylim(ylim)
+        
     ax.legend(loc='upper right') 
     plt.title(title)
     plt.xlabel(xlabel) 
     plt.ylabel(ylabel)
     plt.grid(axis='y', alpha=0.9)
 
+#     for i, df in enumerate(dfs):
+#         print(i)
+#         ax2 = df.plot.kde(ax=ax, secondary_y=True, legend=True, label=key[i] + ' KDE')
+#         ax2.set_ylabel('Density')
+ 
     plt.savefig(save_as)
     plt.gcf().clear()
 
-def rand_choose_camera(cameras, angle):
+def rand_choose_camera(cameras, angle, override=None):
     '''
     Randomly choose the center, left, or right camera.
     
-    cameras -> List of Center, Left, and Right camera images/filepaths
-    angle   -> the angle for the center camera
+    cameras     -> List of Center, Left, and Right camera images/filepaths
+    angle       -> the angle for the center camera
+    override    -> number to override any randomness. I.e. - 0 (Center), 1 (Left), or 2 (Right)
     
     returns a tuple of (camera, angle)
     
@@ -158,7 +190,10 @@ def rand_choose_camera(cameras, angle):
         1: lambda a: a + offset, # Left
         2: lambda a: a - offset # Right
     }
-    return cameras[choice], cam_switch[choice](angle)
+    # Apply override if given
+    if override is not None:
+        choice = override
+    return cameras[choice], cam_switch[choice](float(angle))
     
 def crop_image(img):
     '''
@@ -214,35 +249,12 @@ def rand_translate(img, angle):
     
     return img, angle 
 
-def visualize_training_pipeline(X, y, count=1):
-    '''
-    Visualize Training Data Distribution Before and After Augmentation, as well
-    as visualizations of each stage of the pipeline.
-    '''
-    # Pandas Histogram Plotting Tutorial: https://realpython.com/python-histograms/
-    y_pp = next(image_data_batch_generator(X=X, y=y, 
-                                prepreprocessing=training_preprocessing,
-                                training=True,
-                                batch_size=len(y)))[1]
-    
-    save_kde([pd.Series(np.array(y)).astype(float), pd.Series(np.array(y_pp)).astype(float)],
-                title='Training Set Steering Angle KDE Distributions',  
-                xlabel='Steering Angle', 
-                ylabel='Density', 
-                key=['Original','Augmented'],
-                bins=20, 
-                save_as= 'images/angle_distributions.jpg' )
-    # Follow one image through it's pipeline
-    funcs = []
-    save_images = [f(img) for f in funcs]
-    save_titles = []
-
 def preprocess_image(img):
     '''
     Applies preprocessing techniques to the input img.
 
-    img      -> a 160 x 320 x 3 RGB image
-
+    img       -> a 160 x 320 x 3 RGB image
+    
     returns a 66 x 200 x 3 RGB image
 
     NOTE: 
@@ -282,16 +294,17 @@ def augment_image(img, angle):
     # Other?
     return img, angle 
 
-def rand_horizontal_flip(img, angle):
+def rand_horizontal_flip(img, angle, force=False):
     '''
     Randomly flips the input image and reverses angle direction.
 
     img   -> an image of any dimensions
     angle -> steering angle
+    force -> forces a flip
     
     returns a tuple of (img, angle)
     '''
-    if np.random.rand() < 0.5:
+    if force or np.random.rand() < 0.5:
         # flip the image horizontally
         img = cv2.flip(img, 1)
         # reverse the sign of the steering angle
@@ -304,8 +317,8 @@ def validation_preprocessing(x, y):
     Applies normal preprocessing to the image. Meant for when 
     applying preprocessing to data from a validation set.
 
-    x -> image
-    y -> label (steering angle)
+    x           -> image
+    y           -> label (steering angle)
 
     returns a tuple (x, y)
 
