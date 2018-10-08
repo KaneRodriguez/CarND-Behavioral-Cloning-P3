@@ -147,12 +147,12 @@ Main
 
 # General Setup
 dataPaths = ['../data', '../recovery_data']
-visualizingData = True
+visualizingData = True 
 normalization = lambda x: x/127.5 - 1.
-epochs = 3
-arch_title = '"NVIDIA Architecture"'
-changes = '"Training model with weights from best previous checkpoint (unsaved in log). Added more Batch Regularization Layers to the last logged model. Using gradual lane recovery instead of drastic (sharp correction) lane recovery."'
-pretrained_weights = 'model_checkpoint.h5' # Set to 'None' if not using pretrained weights
+epochs = 3    
+arch_title = '"NVIDIA Architecture"'  
+changes = '""'
+pretrained_weights = None # 'model_checkpoint.h5' # Set to None if not using pretrained weights
 batch_size = 100
 
 # Get Training and Validation Data
@@ -181,7 +181,7 @@ history_object = train_model(model,
 # Update Log
 ut.update_log(history_object=history_object, 
            batch_size=batch_size,
-           arch_title=arch_title, 
+           arch_title=arch_title,
            changes=changes)
 
 print("Saved: ", saveModelPath)
