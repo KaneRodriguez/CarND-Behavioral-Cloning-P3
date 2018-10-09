@@ -26,7 +26,6 @@ The goals / steps of this project are the following:
 
 # TODO:
 * Rename best model to best_model.h5
-* Put nvidia_architecture.jpg file in images
 * Print model summary and save result
 * Use ann_vis library and visualize CNN
 * Fill in links for students that inspired the preprocessing and data augmentation pipeline
@@ -105,21 +104,19 @@ The first training of the modified NVIDIA model had a low mean squared error on 
 
     Modified NVIDIA Architecture w/ Preprocessing and Augmentation
 
-Since the data found in the Udacity provided data set was heavily favored towards straight driving, I decided to augment the data to rectify this uneven steering angle distribution. Techniques of random horizontal flipping, randomly choosing a camera image (center, left, or right), and randomly translating the image across the x and y axes, were inspired by [this](), [this](), and [this]() student. These techniques were all made apart of the training data augmentation pipeline.
+Since the data found in the Udacity provided data set was heavily favored towards straight driving, I decided to augment the data to rectify this uneven steering angle distribution. Techniques of random horizontal flipping, randomly choosing a camera image (center, left, or right), and randomly translating the image across the x and y axes, were inspired by [this](https://github.com/jeremy-shannon/CarND-Behavioral-Cloning-Project), [this](https://towardsdatascience.com/teaching-cars-to-drive-using-deep-learning-steering-angle-prediction-5773154608f2), and [this](http://davidaventimiglia.com/carnd_behavioral_cloning_part1.html) student. These techniques were all made apart of the training data augmentation pipeline.
 
-Also, I decided to preprocess the data through cropping as much of the original image as possible. This aggressive cropping was inspired by [this]() student. The reasoning behind aggressively cropping the image is that there is unnecessary 'future' information in each image. Given that this is a stateless nueral network, the information pertaining to the future is unnecessary and cropping that part of the image leaves more room for the network to learn pertinent features.
+Also, I decided to preprocess the data through cropping as much of the original image as possible. This aggressive cropping was inspired by [this](http://davidaventimiglia.com/carnd_behavioral_cloning_part1.html) student. The reasoning behind aggressively cropping the image is that there is unnecessary 'future' information in each image. Given that this is a stateless nueral network, the information pertaining to the future is unnecessary and cropping that part of the image leaves more room for the network to learn pertinent features.
 
-TODO: The resulting model from these pipelines wa low mean squared error on the training set and relatively high mean squared error on the validation set. When testing the model on the track
+Training the model with the improved pipeline process resulted in a low mean squared error on the training set and relatively high mean squared error on the validation set. When testing the model on the track, the vehicle showed to be biased towards driving straight and drove straight off the track.
 
-To rectify the overfitting, I decided to ... 
+    Modified NVIDIA Architecture w/ Batch Normalization and Dropout
 
-To combat the overfitting, I modified the model so that ...
+To further combat overfitting and the model's bias towards driving straight, I aimed to regularize my model by introducing batch normalization (BN) and dropout layers throughout. In the three locations that I inserted BN and dropout layers, I applied BN before a non-linearity (RELU) and dropout afterwards. 
 
-Then I ... 
+To address the lack of lane recovery data, I manually gathered recovery focused training data from the simulator. I continually placed the vehicle on the side of the road and recorded the vehicle gradually making it's way towards the center. Also, I gathered data where the vehicle was taking sharp turns.
 
-The final step was to run the simulator to see how well the car was driving around track one. There were a few spots where the vehicle fell off the track... to improve the driving behavior in these cases, I ....
-
-At the end of the process, the vehicle is able to drive autonomously around the track without leaving the road.
+The result of these efforts was a slight increase in the mean squared error on the training data and a significant decrease in the mean squared error for the validation data. This model was able to drive autonomously around track one without veering off the road!
 
 #### 2. Final Model Architecture
 
