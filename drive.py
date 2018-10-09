@@ -47,7 +47,7 @@ class SimplePIController:
 
 
 controller = SimplePIController(0.01, 0.002)
-set_speed = 20
+set_speed = 11
 controller.set_desired(set_speed)
 
 @sio.on('telemetry')
@@ -122,6 +122,7 @@ if __name__ == '__main__':
         default='',
         help='Path to image folder. This is where the images from the run will be saved.'
     )
+    
     args = parser.parse_args()
 
     # check that model Keras version is same as local Keras version
