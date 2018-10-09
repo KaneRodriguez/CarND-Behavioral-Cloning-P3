@@ -27,8 +27,9 @@ The goals / steps of this project are the following:
 # TODO:
 * Rename best model to best_model.h5
 * Print model summary and save result
-* Use ann_vis library and visualize CNN
-* Fill in links for students that inspired the preprocessing and data augmentation pipeline
+* Add links to code snippets referenced in this file
+* Update docs on video recording
+* Add kde graph to the augmentation step
 
 ---
 ### Files Submitted & Code Quality
@@ -64,11 +65,13 @@ This utility file contains preprocessing code (`preprocess_image`, `augment_imag
 
 #### 1. An appropriate model architecture has been employed
 
-I based my model off of the NVIDIA convolution neural network architecture found [here](https://devblogs.nvidia.com/deep-learning-self-driving-cars/).
+I based my model off of the NVIDIA convolution neural network architecture found [here](https://devblogs.nvidia.com/deep-learning-self-driving-cars/). A diagram of the NVIDIA CNN architecture is given below.
 
-My final solution consisted of the following architecture:
+![nvidia_architecture][nvidia_architecture]
 
-Note: See the 'Final Model Architecture' section below for further details.
+I modified this architecture to have a final 1 neuron fully connected layer at the end. Also, I added three batch normalization (BN) and dropout layers. I added one BN/dropout after the first 3 convolusions, another one after another 2 consecutive convolusions, and a final BN/dropout combination between the 3 fully connected layers and the last fully connected layer of 1 neuron.
+
+Note: See the [Final Model Architecture](#2.-final-model-architecture) section below for further details.
 
 #### 2. Attempts to reduce overfitting in the model
 
@@ -120,39 +123,52 @@ The result of these efforts was a slight increase in the mean squared error on t
 
 #### 2. Final Model Architecture
 
-The final model architecture (model.py lines 18-24) consisted of a convolution neural network with the following layers and layer sizes ...
+TODO: The final model architecture (model.py lines 18-24) consisted of a convolution neural network with the following layers and layer sizes ...
 
-Here is a visualization of the architecture (note: visualizing the architecture is optional according to the project rubric)
+Here is a visualization of the architecture:
 
-![alt text][image1]
+![TODO][TODO]
 
 #### 3. Creation of the Training Set & Training Process
 
-![angle_distribution][angle_distribution]
-![augmented_angle_distribution][augmented_angle_distribution]
+I used a combination of the Udacity data set and lane recovery focused data that I manually collected. The distribution of the steering angle of my combined data set before and after data preprocessing and augmentation, is shown below:
 
-To capture good driving behavior, I first recorded two laps on track one using center lane driving. Here is an example image of center lane driving:
+![angle_distributions][angle_distributions]
 
-![alt text][image2]
+One can see from the above figure that the original data set is highly concentrated in the center with most images having a steering angle close to 0. Preprocessing and augmentation causes the data to take on a 'Bell Curve' normal distribution. Although the data still appears to be centered around zero, the data is not as zero-centric as it's un-preprocessed predecessor.
 
-I then recorded the vehicle recovering from the left side and right sides of the road back to center so that the vehicle would learn to .... These images show what a recovery looks like starting from ... :
+Note: When initially loading in my data in a generator function, I randomly shuffle my data set.
 
-![alt text][image3]
-![alt text][image4]
-![alt text][image5]
+##### Preprocessing and Augmentation
 
-Then I repeated this process on track two in order to get more data points.
+The figure below provides a visualization of several images, and their respective steering angles, as they traverse through the preprocessing and augmentation pipeline.
 
-To augment the data sat, I also flipped images and angles thinking that this would ... For example, here is an image that has then been flipped:
+![processing_stages][processing_stages]
 
-![alt text][image6]
-![alt text][image7]
+See the following sub-sections for an in-depth discussion of each image preprocessing/augmentation stage.
 
-Etc ....
+###### Preprocessing
+ 
+The initial stage in preprocessing is choosing one of the available camera images. There are three viable camera orientations, and the table below shows the offset added to an image's original steering angle based on which camera orientation is chosen.
 
-After the collection process, I had X number of data points. I then preprocessed this data by ...
+| Camera | Offset |
+|:------:|:------:|
+| Center | 0.00  |
+| Left   | 0.26  |
+| Right  | -0.26 |
 
+A visualization of several images and their camera views is given below.
 
-I finally randomly shuffled the data set and put Y% of the data into a validation set. 
+![camera_views][camera_views]
 
-I used this training data for training the model. The validation set helped determine if the model was over or under fitting. The ideal number of epochs was Z as evidenced by ... I used an adam optimizer so that manually training the learning rate wasn't necessary.
+The next stage in image preprocessing consists of cropping the majority of the image and resizing the image to the input-shape specifications outlined in the NVIDIA paper discussed earlier. 
+
+The aim of image cropping was to reduce the image down to the minimum amount necessary to make a decision. Since most of the upper portion of the image is irrelevant to the immediate action, it can be cropped. If our model was not stateless, then this extra information could have been of use.
+
+###### Augmentation
+
+When augmenting the data, there were several goals to keep in mind. For one, we want to fight off the highly concentrated zero-degree steering angles. Two, we want our model to better generalize in order to be robust to a plethora of varying inputs. 
+
+Implementing a random horizontal flip to the training images allows our model to encounter a broader amount of scenarios than it would have if there was not any horizontal flipping. For example, if we have a sequence of images fed to our model that were taken at relatively close proximity, the model would not gain much from each new similar image. However, by flipping several of these images, the model is introduced to viable data from an entirely different perspective. It's like we are given free extra data!
+
+The next data augmentation step of randomly translating the image in the x and y directions aims to distribute steering angles further from the center. By randomly translating the image in the x direction and adjusting the steering angle by 0.0035 units per pixel translated, our data set randomly shifts images in varying directions. Since the majority of our images are concentrated in the center, this (in practice) succeeds in lowering the kernel density information metric of our data.
