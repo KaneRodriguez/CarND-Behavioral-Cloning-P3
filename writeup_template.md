@@ -24,13 +24,6 @@ The goals / steps of this project are the following:
 ## Rubric Points
 ### Here I will consider the [rubric points](https://review.udacity.com/#!/rubrics/432/view) individually and describe how I addressed each point in my implementation.  
 
-# TODO:
-* Rename best model to best_model.h5
-* Print model summary and save result
-* Add links to code snippets referenced in this file
-* Update docs on video recording
-* Add kde graph to the augmentation step
-
 ---
 ### Files Submitted & Code Quality
 
@@ -46,7 +39,7 @@ My project includes the following files:
 Using the Udacity provided simulator and my drive.py file, the car can be driven autonomously around the track by executing 
 
 ```sh
-python drive.py best_model.h5
+python drive.py model.h5
 ```
 
 #### 3. Submission code is usable and readable
@@ -123,11 +116,69 @@ The result of these efforts was a slight increase in the mean squared error on t
 
 #### 2. Final Model Architecture
 
-TODO: The final model architecture (model.py lines 18-24) consisted of a convolution neural network with the following layers and layer sizes ...
+The final model architecture consisted of a convolution neural network with the following layers and layer sizes:
 
-Here is a visualization of the architecture:
+```python
+_________________________________________________________________
+Layer (type)                 Output Shape              Param #
+=================================================================
+lambda_1 (Lambda)            (None, 66, 200, 3)        0
+_________________________________________________________________
+conv2d_1 (Conv2D)            (None, 31, 98, 24)        1824
+_________________________________________________________________
+conv2d_2 (Conv2D)            (None, 14, 47, 36)        21636
+_________________________________________________________________
+conv2d_3 (Conv2D)            (None, 5, 22, 48)         43248
+_________________________________________________________________
+batch_normalization_1 (Batch (None, 5, 22, 48)         192
+_________________________________________________________________
+activation_1 (Activation)    (None, 5, 22, 48)         0
+_________________________________________________________________
+dropout_1 (Dropout)          (None, 5, 22, 48)         0
+_________________________________________________________________
+conv2d_4 (Conv2D)            (None, 3, 20, 64)         27712
+_________________________________________________________________
+conv2d_5 (Conv2D)            (None, 1, 18, 64)         36928
+_________________________________________________________________
+batch_normalization_2 (Batch (None, 1, 18, 64)         256
+_________________________________________________________________
+activation_2 (Activation)    (None, 1, 18, 64)         0
+_________________________________________________________________
+dropout_2 (Dropout)          (None, 1, 18, 64)         0
+_________________________________________________________________
+flatten_1 (Flatten)          (None, 1152)              0
+_________________________________________________________________
+dense_1 (Dense)              (None, 100)               115300
+_________________________________________________________________
+dense_2 (Dense)              (None, 50)                5050
+_________________________________________________________________
+dense_3 (Dense)              (None, 10)                510
+_________________________________________________________________
+batch_normalization_3 (Batch (None, 10)                40
+_________________________________________________________________
+activation_3 (Activation)    (None, 10)                0
+_________________________________________________________________
+dropout_3 (Dropout)          (None, 10)                0
+_________________________________________________________________
+dense_4 (Dense)              (None, 1)                 11
+=================================================================
+Total params: 252,707
+Trainable params: 252,463
+Non-trainable params: 244
+_________________________________________________________________
+```
 
-![TODO][TODO]
+The initial lambda layer normalizes, and mean centers, the input image data from 0 - 255 to between -0.5 and 0.5 for each pixel value.
+
+The following three convolusion layers each apply a 5 x 5 kernel and use 2 x 2 strides. The first two of these three layers use RELU activation functions, wheras the last layer does not apply any activation function.
+
+In order to assist with regularization, a sequence batch normalization (BN), RELU, and dropout layers are added in several locations. Immediately following the first three convolusion layers is one such BN -> RELU -> dropout sequence.
+
+After the first regularization sequence, another two convolusion layers using a 3 x 3 kernel and no strides are applied. Here, only the first convolusion layer is followed by a RELU.
+
+Another regularization sequence (described above) is then applied.
+
+Next, the output is flattened and fed through a series of three fully connected layers. After which, another regulariztaion sequence is applied before feeding forward to a 1 neuron layer that outputs our steering angle prediction.
 
 #### 3. Creation of the Training Set & Training Process
 
