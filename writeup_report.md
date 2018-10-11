@@ -82,7 +82,7 @@ Also, a 50% dropout was chosen for each dropout layer. This parameter remained c
 
 The training data used to keep the vehicle driving on the road was a combination of the provided Udacity data set ([link](https://d17h27t6h515a5.cloudfront.net/topher/2016/December/584f6edd_data/data.zip)) and my own training data. I chose my training data based on the weak points spotted once running the models trained on the Udacity data set. I addressed these weak points by recording several passes on the sharp turn after the bridge and by recording lane recovery data (from left or right side of the road to center) all along the track.
 
-For details about how I created the training data, see the [Creation of the Training Set & Training Process](3-creation-of-the-training-set-&-training-process) section.
+For details about how I created the training data, see the [Creation of the Training Set & Training Process](3-creation-of-the-training-set--training-process) section.
 
 ### Model Architecture and Training Strategy
 
