@@ -64,7 +64,7 @@ I based my model off of the NVIDIA convolution neural network architecture found
 
 I modified this architecture to have a final 1 neuron fully connected layer at the end. Also, I added three batch normalization (BN) and dropout layers. I added one BN/dropout after the first 3 convolusions, another one after another 2 consecutive convolusions, and a final BN/dropout combination between the 3 fully connected layers and the last fully connected layer of 1 neuron.
 
-Note: See the [Final Model Architecture](#2.-final-model-architecture) section below for further details.
+Note: See the [Final Model Architecture](#2-final-model-architecture) section below for further details.
 
 #### 2. Attempts to reduce overfitting in the model
 
@@ -82,7 +82,7 @@ Also, a 50% dropout was chosen for each dropout layer. This parameter remained c
 
 The training data used to keep the vehicle driving on the road was a combination of the provided Udacity data set ([link](https://d17h27t6h515a5.cloudfront.net/topher/2016/December/584f6edd_data/data.zip)) and my own training data. I chose my training data based on the weak points spotted once running the models trained on the Udacity data set. I addressed these weak points by recording several passes on the sharp turn after the bridge and by recording lane recovery data (from left or right side of the road to center) all along the track.
 
-For details about how I created the training data, see the next section. 
+For details about how I created the training data, see the [Creation of the Training Set & Training Process](3-creation-of-the-training-set-&-training-process) section.
 
 ### Model Architecture and Training Strategy
 
@@ -113,6 +113,10 @@ To further combat overfitting and the model's bias towards driving straight, I a
 To address the lack of lane recovery data, I manually gathered recovery focused training data from the simulator. I continually placed the vehicle on the side of the road and recorded the vehicle gradually making it's way towards the center. Also, I gathered data where the vehicle was taking sharp turns.
 
 The result of these efforts was a slight increase in the mean squared error on the training data and a significant decrease in the mean squared error for the validation data. This model was able to drive autonomously around track one without veering off the road!
+
+![simulator_gif.gif](./images/simulator_gif.gif)
+
+Note: See how in the gif above the vehicle tends to hug the curves? This is likely a combination of the custom data that I gathered (I'm not the best simulator driver), the model's slight bias towards driving straight, and the lack of future information being considered in the model's decisions due to the image being fed to the model being aggressively cropped. Also, having this model or a separate model predict a corresponding speed could also help on sharp curves. 
 
 #### 2. Final Model Architecture
 
